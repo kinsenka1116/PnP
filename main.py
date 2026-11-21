@@ -25,11 +25,12 @@ def image_process(frame_id, time_s, img):
     # cv.waitKey(0)
 def video_process(video_path):
     cap=cv.VideoCapture(video_path)
+    fps = cap.get(cv.CAP_PROP_FPS)
     fourcc = cv.VideoWriter_fourcc(*"XVID")
     out = cv.VideoWriter(
     "./outputs/Output_video.avi",
     fourcc,
-    120.0,
+    fps,
     (Const.image_width, Const.image_height)
     )
     if not cap.isOpened():

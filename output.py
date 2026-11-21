@@ -1,4 +1,5 @@
 import cv2 as cv
+import Const
 import os
 import csv
 def Out_image(img,filename):
@@ -17,7 +18,7 @@ def Find_None_Aim(frame_id, time_s):
         list_row = []
         list_row.append(frame_id)
         list_row.append(time_s)
-        list_row.append(-1)
+        list_row.append(False)
         writer.writerow(list_row)
 def Get_reprojection_error(aim_points, imagePoints):
     if imagePoints is None:
@@ -31,6 +32,15 @@ def Get_reprojection_error(aim_points, imagePoints):
     reprojection_error_px = error / len(aim_points)
     return reprojection_error_px
 #第 i 个原始角点为 (u_i, v_i)，对应的重投影点为 (u_hat_i, v_hat_i)，先计算 e_i = sqrt((u_i-u_hat_i)^2 + (v_i-v_hat_i)^2)，再计算 reprojection_error_px = (e_0+e_1+e_2+e_3)/4
+def check_PnP(ret,aim_points,imagePoints,tvec):
+    p=aim_points[1][0]-aim_points[0][0]
+    Z_rough=Const.K[0,0]*Const.w/(p)
+    tz=tvec
+    delta=abs(Z_rough-tz)/min(tz, Z_rough)
+    if ret and Get_reprojection_error(aim_points, imagePoints)<=5.0 and tvec>=0 and delta<10:
+        return 1
+    else :
+        return 0
 def output_frame_csv(frame_id, time_s,array_detect, array_ret, array_rvec, array_tvec,array_aim_points,array_imagePoints):
     with open("./outputs/data.csv", "a", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
@@ -39,9 +49,9 @@ def output_frame_csv(frame_id, time_s,array_detect, array_ret, array_rvec, array
             list_row.append(frame_id)
             list_row.append(time_s)
             list_row.append(i)
-            list_row.append(array_detect[i])
-            list_row.append(array_ret[i])
-            if array_ret[i]:
+            list_row.append(True)
+            if check_PnP(array_ret[i],array_aim_points[i], array_imagePoints[i], array_tvec[i][2][0]):
+                list_row.append(True)
                 list_row.append(array_tvec[i][0][0])
                 list_row.append(array_tvec[i][1][0])
                 list_row.append(array_tvec[i][2][0])
@@ -51,6 +61,8 @@ def output_frame_csv(frame_id, time_s,array_detect, array_ret, array_rvec, array
                 list_row.append(array_rvec[i][1][0])
                 list_row.append(array_rvec[i][2][0])
                 list_row.append(Get_reprojection_error(array_aim_points[i], array_imagePoints[i]))
+            else :
+                list_row.append(False)
             writer.writerow(list_row)
 # frame_id, time_s, candidate_id,
 # detect_valid, pnp_valid,
